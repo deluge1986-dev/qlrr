@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import io  # Thêm thư viện xử lý luồng byte dữ liệu đầu vào
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
@@ -19,12 +20,15 @@ st.set_page_config(
 # 2. IMPORT & CÁC HÀM CACHE DÙNG CHUNG
 @st.cache_data
 def load_data(file_bytes, file_name):
-    """Nạp dữ liệu từ bytes để đảm bảo tính hashable cho st.cache_data"""
+    """Nạp dữ liệu từ bytes thông qua io.BytesIO để Pandas phân tích chính xác"""
     try:
+        # Chuyển đổi dữ liệu byte thành file-like object để Pandas có thể đọc được
+        data_stream = io.BytesIO(file_bytes)
+        
         if file_name.endswith('.csv'):
-            df = pd.read_csv(file_bytes)
+            df = pd.read_csv(data_stream)
         elif file_name.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file_bytes)
+            df = pd.read_excel(data_stream)
         else:
             return None
         return df
@@ -144,7 +148,7 @@ if btn_train:
         }
         st.success(f"🎉 Huấn luyện thành công mô hình **{model_choice}**! Hãy theo dõi kết quả ở các Tab bên dưới.")
 
-# 6. KHỞI TẠO CÁC TABS GIAO DIỆN CHÍNH
+# 6. KHỔI TẠO CÁC TABS GIAO DIỆN CHÍNH
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Tổng quan dữ liệu", 
     "📈 Trực quan hóa dữ liệu", 
