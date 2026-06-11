@@ -19,7 +19,7 @@ st.set_page_config(
     page_icon="😊"
 )
 
-st.title("🛡️ Ứng Dụng Phát Hiện Giao Dịch Gian Lận & Rủi Ro")
+st.title("Ứng Dụng Phát Hiện Giao Dịch Gian Lận & Rủi Ro :d")
 st.caption("Ứng dụng hỗ trợ phân tích dữ liệu giao dịch tài chính, tự động tìm kiếm hành vi bất thường và dự đoán rủi ro gian lận dựa trên Machine Learning.")
 st.divider()
 
