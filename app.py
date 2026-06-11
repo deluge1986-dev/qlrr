@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import io  # Thêm thư viện xử lý luồng byte dữ liệu đầu vào
+import io  
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
@@ -10,21 +10,27 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_curve, auc
 
-# 1. CẤU HÌNH PAGE STREAMLIT ĐẦU TIÊN
+# ==========================================
+# 1. CẤU HÌNH TRANG & TIÊU ĐỀ ỨNG DỤNG (CHỈ XUẤT HIỆN 1 LẦN)
+# ==========================================
 st.set_page_config(
     layout="wide",
     page_title="Hệ Thống Phát Hiện Giao Dịch Gian Lận",
     page_icon="🛡️"
 )
 
-# 2. IMPORT & CÁC HÀM CACHE DÙNG CHUNG
+st.title("🛡️ Ứng Dụng Phát Hiện Giao Dịch Gian Lận & Rủi Ro")
+st.caption("Ứng dụng hỗ trợ phân tích dữ liệu giao dịch tài chính, tự động tìm kiếm hành vi bất thường và dự đoán rủi ro gian lận dựa trên Machine Learning.")
+st.divider()
+
+# ==========================================
+# 2. CÁC HÀM XỬ LÝ DỮ LIỆU CACHE
+# ==========================================
 @st.cache_data
 def load_data(file_bytes, file_name):
     """Nạp dữ liệu từ bytes thông qua io.BytesIO để Pandas phân tích chính xác"""
     try:
-        # Chuyển đổi dữ liệu byte thành file-like object để Pandas có thể đọc được
         data_stream = io.BytesIO(file_bytes)
-        
         if file_name.endswith('.csv'):
             df = pd.read_csv(data_stream)
         elif file_name.endswith(('.xls', '.xlsx')):
@@ -39,11 +45,12 @@ def load_data(file_bytes, file_name):
 X_COLS = [f"X_{i}" for i in range(1, 15)]
 Y_COL = "default"
 
-# 3. SIDEBAR (TP1) - VÙNG CẤU HÌNH
+# ==========================================
+# 3. SIDEBAR - VÙNG CẤU HÌNH THAM SỐ
+# ==========================================
 with st.sidebar:
     st.header("⚙️ Cấu hình & Tải dữ liệu")
     
-    # Tải dữ liệu mẫu hoặc dữ liệu huấn luyện
     uploaded_file = st.file_uploader(
         "Tải lên tệp dữ liệu huấn luyện (.csv, .xlsx)", 
         type=["csv", "xlsx"],
@@ -52,7 +59,6 @@ with st.sidebar:
     
     st.divider()
     
-    # Lựa chọn mô hình AI
     model_choice = st.selectbox(
         "Chọn thuật toán phân loại",
         options=["Random Forest", "Decision Tree", "Logistic Regression"],
@@ -83,11 +89,9 @@ with st.sidebar:
     st.write("")
     btn_train = st.button("🚀 Huấn luyện mô hình", type="primary", use_container_width=True)
 
-# 4. HEADER (TP2) - VÙNG ĐỊNH HƯỚNG
-st.title("🛡️ Ứng Dụng Phát Hiện Giao Dịch Gian Lận & Rủi Ro")
-st.caption("Ứng dụng hỗ trợ phân tích dữ liệu giao dịch tài chính, tự động tìm kiếm hành vi bất thường và dự đoán rủi ro gian lận dựa trên Machine Learning.")
-
-# Kiểm tra trạng thái tải file của người dùng
+# ==========================================
+# 4. KIỂM TRA TRẠNG THÁI FILE & VALIDATE SCHEMA
+# ==========================================
 if uploaded_file is None:
     st.info("💡 Vui lòng tải lên file dữ liệu (.csv hoặc .xlsx) ở thanh cấu hình bên trái để bắt đầu khám phá và huấn luyện mô hình.")
     st.stop()
@@ -95,21 +99,20 @@ if uploaded_file is None:
 # Đọc dữ liệu từ file upload
 df_global = load_data(uploaded_file.getvalue(), uploaded_file.name)
 
-# Kiểm tra tính hợp lệ của DataFrame
 if df_global is None or not isinstance(df_global, pd.DataFrame):
     st.error("❌ Không thể phân tích tệp dữ liệu. Vui lòng kiểm tra lại định dạng hoặc cấu trúc file đầu vào.")
     st.stop()
 
-# Kiểm tra schema dữ liệu bắt buộc
 missing_cols = [col for col in X_COLS + [Y_COL] if col not in df_global.columns]
 if missing_cols:
     st.error(f"❌ Tệp dữ liệu thiếu các cột bắt buộc sau: {', '.join(missing_cols)}")
     st.stop()
 
-st.caption(f"📁 Đang sử dụng tệp: **{uploaded_file.name}** | Quy mô dữ liệu: **{df_global.shape[0]:,}** dòng, **{df_global.shape[1]}** cột.")
-st.divider()
+st.success(f"📁 Đang sử dụng tệp: **{uploaded_file.name}** | Quy mô dữ liệu: **{df_global.shape[0]:,}** dòng, **{df_global.shape[1]}** cột.")
 
-# 5. KHỐI HUẤN LUYỆN (Chạy khi bấm nút, lưu toàn bộ kết quả vào session_state)
+# ==========================================
+# 5. KHỐI LOGIC HUẤN LUYỆN MÔ HÌNH
+# ==========================================
 if btn_train:
     with st.spinner("⏳ Đang xử lý dữ liệu và huấn luyện mô hình..."):
         X = df_global[X_COLS]
@@ -131,10 +134,11 @@ if btn_train:
         y_pred = model.predict(X_test)
         y_probs = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") else None
         
-        # Lưu trữ an toàn vào session_state
+        # Lưu trữ vào bộ nhớ phiên làm việc
         st.session_state['trained_model'] = model
         st.session_state['model_name'] = model_choice
         st.session_state['features_list'] = X_COLS
+        st.session_state['show_success_alert'] = True # Cờ đánh dấu hiển thị thông báo hợp lý
         
         st.session_state['metrics'] = {
             'accuracy': accuracy_score(y_test, y_pred),
@@ -146,9 +150,10 @@ if btn_train:
             'y_pred': y_pred.tolist(),
             'y_probs': y_probs.tolist() if y_probs is not None else None
         }
-        st.success(f"🎉 Huấn luyện thành công mô hình **{model_choice}**! Hãy theo dõi kết quả ở các Tab bên dưới.")
 
-# 6. KHỔI TẠO CÁC TABS GIAO DIỆN CHÍNH
+# ==========================================
+# 6. GIAO DIỆN CHÍNH - PHÂN PHÒNG CÁC TABS
+# ==========================================
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Tổng quan dữ liệu", 
     "📈 Trực quan hóa dữ liệu", 
@@ -208,12 +213,15 @@ with tab2:
 with tab3:
     st.subheader("🎯 Đánh giá hiệu năng thuật toán trên tập Test")
     
-    # Kiểm tra an toàn: Nếu chưa huấn luyện thì ngắt tab bằng st.stop() để chặn lỗi
     if 'metrics' not in st.session_state:
         st.info("📢 Vui lòng bấm vào nút **[🚀 Huấn luyện mô hình]** tại thanh công cụ Sidebar bên trái để chạy thuật toán và xem báo cáo kiểm định.")
         st.stop()
     
-    # Khi đã chắc chắn có metrics trong session_state thì mới xử lý tiếp
+    # Đưa thông báo thành công vào đúng vị trí đầu trang kết quả kiểm định
+    if st.session_state.get('show_success_alert', False):
+        st.success(f"🎉 Huấn luyện thành công mô hình **{st.session_state['model_name']}**!")
+        st.session_state['show_success_alert'] = False # Tắt cờ sau khi hiển thị xong
+        
     metrics = st.session_state['metrics']
     current_model_name = st.session_state['model_name']
     st.markdown(f"Đang hiển thị kết quả kiểm định của mô hình: **{current_model_name}**")
@@ -246,12 +254,10 @@ with tab3:
 with tab4:
     st.subheader("🔮 Phòng ngừa rủi ro real-time / Dự báo hàng loạt")
     
-    # Kiểm tra an toàn tuyệt đối: Nếu chưa huấn luyện thì ngắt tab bằng st.stop() để triệt tiêu KeyError
     if 'trained_model' not in st.session_state:
         st.info("📢 Vui lòng bấm vào nút **[🚀 Huấn luyện mô hình]** tại thanh công cụ Sidebar bên trái trước khi thực hiện chức năng dự báo rủi ro giao dịch.")
         st.stop()
     
-    # Khi đã vượt qua kiểm tra, an tâm sử dụng mô hình từ session_state
     model = st.session_state['trained_model']
     predict_mode = st.radio("Phương thức nhập dữ liệu đầu vào:", options=["Nhập thông số trực tiếp (Đơn lẻ)", "Tải tệp danh sách cần chấm điểm (Hàng loạt)"], horizontal=True)
     
