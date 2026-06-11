@@ -79,35 +79,34 @@ with st.sidebar:
     st.write("")
     btn_train = st.button("🚀 Huấn luyện mô hình", type="primary", use_container_width=True)
 
-# 4. HEADER (TP2) - VÙNG ĐỊNH HƯỚNG & KHỞI TẠO BIẾN TOÀN CỤC AN TOÀN
+# 4. HEADER (TP2) - VÙNG ĐỊNH HƯỚNG
 st.title("🛡️ Ứng Dụng Phát Hiện Giao Dịch Gian Lận & Rủi Ro")
 st.caption("Ứng dụng hỗ trợ phân tích dữ liệu giao dịch tài chính, tự động tìm kiếm hành vi bất thường và dự đoán rủi ro gian lận dựa trên Machine Learning.")
 
-# Khởi tạo giá trị df_global là None để tránh lỗi NameError ở các luồng xử lý phía sau
-df_global = None
-
+# Kiểm tra trạng thái tải file của người dùng
 if uploaded_file is None:
     st.info("💡 Vui lòng tải lên file dữ liệu (.csv hoặc .xlsx) ở thanh cấu hình bên trái để bắt đầu khám phá và huấn luyện mô hình.")
     st.stop()
-else:
-    # Đọc dữ liệu ngay khi file được upload thành công (đảm bảo biến luôn tồn tại)
-    df_global = load_data(uploaded_file.getvalue(), uploaded_file.name)
-    
-    if df_global is None:
-        st.error("❌ Không thể đọc tệp dữ liệu. Vui lòng kiểm tra lại định dạng file.")
-        st.stop()
 
-    # Kiểm tra schema dữ liệu bắt buộc
-    missing_cols = [col for col in X_COLS + [Y_COL] if col not in df_global.columns]
-    if missing_cols:
-        st.error(f"❌ Tệp dữ liệu thiếu các cột bắt buộc sau: {', '.join(missing_cols)}")
-        st.stop()
+# Đọc dữ liệu từ file upload
+df_global = load_data(uploaded_file.getvalue(), uploaded_file.name)
 
-    st.caption(f"📁 Đang sử dụng tệp: **{uploaded_file.name}** | Quy mô dữ liệu: **{df_global.shape[0]:,}** dòng, **{df_global.shape[1]}** cột.")
+# KIỂM TRA CHẶN LỖI: Đảm bảo df_global phải là một DataFrame hợp lệ, không phải Tuple hay None
+if df_global is None or not isinstance(df_global, pd.DataFrame):
+    st.error("❌ Không thể phân tích tệp dữ liệu. Vui lòng kiểm tra lại định dạng hoặc cấu trúc file đầu vào.")
+    st.stop()
+
+# Kiểm tra schema dữ liệu bắt buộc (Đã an toàn vì chắc chắn df_global là DataFrame)
+missing_cols = [col for col in X_COLS + [Y_COL] if col not in df_global.columns]
+if missing_cols:
+    st.error(f"❌ Tệp dữ liệu thiếu các cột bắt buộc sau: {', '.join(missing_cols)}")
+    st.stop()
+
+st.caption(f"📁 Đang sử dụng tệp: **{uploaded_file.name}** | Quy mô dữ liệu: **{df_global.shape[0]:,}** dòng, **{df_global.shape[1]}** cột.")
 st.divider()
 
 # 5. KHỐI HUẤN LUYỆN (Chạy khi bấm nút, lưu kết quả vào session_state)
-if btn_train and df_global is not None:
+if btn_train:
     with st.spinner("⏳ Đang xử lý dữ liệu và huấn luyện mô hình..."):
         X = df_global[X_COLS]
         y = df_global[Y_COL]
@@ -142,9 +141,9 @@ if btn_train and df_global is not None:
             'y_pred': y_pred.tolist(),
             'y_probs': y_probs.tolist() if y_probs is not None else None
         }
-        st.success(f"🎉 Huấn luyện thành công mô hình **{model_choice}**!")
+        st.success(f"🎉 Huấn luyện thành công mô hình **{model_choice}**! Chuyển sang tab bên dưới để xem đánh giá.")
 
-# 6. KHỞI TẠO CÁC TABS GIAO DIỆN CHÍNH (Sử dụng df_global một cách an toàn)
+# 6. KHỞI TẠO CÁC TABS GIAO DIỆN CHÍNH
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Tổng quan dữ liệu", 
     "📈 Trực quan hóa dữ liệu", 
